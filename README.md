@@ -40,7 +40,6 @@ pip install pandas numpy matplotlib pillow
    * Load `patient_data.csv`
    * Compute weekly average systolic blood pressure per patient
    * Generate a line plot for each patient (`patient_<id>_plot.png`)
-   * Create a combined infographic (`patient_<id>_infographic.png`)
 
 ## Updating Patient Data
 
