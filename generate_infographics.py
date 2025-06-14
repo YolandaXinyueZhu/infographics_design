@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 # Constants
 DATA_FILE = Path("patient_data.csv")
-TEMPLATE_IMAGE = Path("infographics_template.png")
+TEMPLATE_IMAGE = Path("image2.png")
 FONT_PATH = "arial.ttf"
 PLOT_DPI = 300
 PLOT_SIZE = (4.5, 4)
@@ -191,112 +191,6 @@ def calculate_x(
     return y1 + (value - x1) * (y2 - y1) / (x2 - x1)
 
 
-def create_infographic(
-    plot_path: Path, baseline: float,
-    recent: float, patient_id
-) -> Path:
-    """
-    Overlay plot and annotations onto an infographic template.
-    """
-    bg = Image.open(TEMPLATE_IMAGE)
-    plot_img = Image.open(plot_path)
-
-    # Paste the plot
-    x_offset = int(0.07 * bg.width)
-    y_offset = int(0.130 * bg.height)
-    bg.paste(plot_img, (x_offset, y_offset), plot_img)
-
-    draw = ImageDraw.Draw(bg)
-    font_small = ImageFont.truetype(FONT_PATH, 17)
-    font_large = ImageFont.truetype(FONT_PATH, 40)
-    font_progress = ImageFont.truetype(FONT_PATH, 20)
-
-    # Compute arrow positions
-    base_x = int(calculate_x(baseline))
-    recent_x = int(calculate_x(recent))
-    y_base = int(0.78 * bg.height)
-    y_recent = int(0.735 * bg.height)
-
-    # Draw baseline arrow
-    draw.polygon([
-        (base_x, y_base),
-        (base_x - ARROW_HEAD_SIZE, y_base + ARROW_HEAD_SIZE),
-        (base_x + ARROW_HEAD_SIZE, y_base + ARROW_HEAD_SIZE)
-    ], fill="black")
-    draw.line(
-        [(base_x, y_base + ARROW_HEAD_SIZE),
-         (base_x, y_base + ARROW_SIZE)],
-        fill="black", width=2
-    )
-
-    # Draw recent arrow
-    draw.polygon([
-        (recent_x, y_recent),
-        (recent_x - ARROW_HEAD_SIZE, y_recent - ARROW_HEAD_SIZE),
-        (recent_x + ARROW_HEAD_SIZE, y_recent - ARROW_HEAD_SIZE)
-    ], fill="black")
-    draw.line(
-        [(recent_x, y_recent - ARROW_HEAD_SIZE),
-         (recent_x, y_recent - ARROW_SIZE)],
-        fill="black", width=2
-    )
-
-    # Labels
-    text_x = int(0.62 * bg.width)
-    y_text_base = int(0.68 * bg.height)
-    y_text_recent = int(0.765 * bg.height)
-    y_text_progress = int(0.85 * bg.height)
-
-    draw.text((text_x - 0.8 * ARROW_SIZE, y_base + 1.1 * ARROW_SIZE),
-              "Baseline", font=font_small, fill="black")
-    draw.text((text_x - 1.2 * ARROW_SIZE, y_recent - 1.65 * ARROW_SIZE),
-              "Most Recent", font=font_small, fill="black")
-
-    draw.text((text_x, y_text_base), f"{int(baseline)}", font=font_large, fill="black")
-    draw.text((text_x, y_text_recent), f"{int(recent)}", font=font_large, fill="black")
-
-    # Progress message
-    if GOAL_RANGE[0] <= recent <= GOAL_RANGE[1]:
-        message = "Great job! Your blood pressure is in the goal range!"
-    elif recent > baseline + 10:
-        message = "Your blood pressure is significantly above the goal."
-    elif recent > baseline + 5:
-        message = "Your blood pressure is above the goal."
-    elif recent < baseline - 10:
-        message = "Excellent job! Your blood pressure has improved significantly."
-    elif recent < baseline - 5:
-        message = "Good job! Your blood pressure has improved."
-    else:
-        if recent > GOAL_RANGE[1] and baseline > GOAL_RANGE[1]:
-            message = "Your blood pressure is stable but above the goal."
-        elif recent < GOAL_RANGE[0] and baseline < GOAL_RANGE[0]:
-            message = "Your blood pressure is stable but below the goal."
-        else:
-            message = "Your blood pressure is stable."
-
-    # Wrap message
-    words = message.split()
-    lines = []
-    current = ""
-    for w in words:
-        if len(current) + len(w) + 1 <= 35:
-            current += f" {w}"
-        else:
-            lines.append(current.strip())
-            current = w
-    if current:
-        lines.append(current.strip())
-
-    for i, line in enumerate(lines):
-        draw.text(
-            (text_x, y_text_progress + i * (font_progress.size + 5)),
-            line, font=font_progress, fill="black"
-        )
-
-    output = Path(f"patient_{patient_id}_infographic.png")
-    bg.save(output)
-    return output
-
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
@@ -309,10 +203,6 @@ def main() -> None:
             continue
         weekly_avg = calculate_weekly_averages(data, pid)
         plot_file = plot_data(weekly_avg, pid)
-        if plot_file:
-            baseline = weekly_avg['measurements_systolicbloodpressure_value'].iloc[0]
-            recent = weekly_avg['measurements_systolicbloodpressure_value'].iloc[-1]
-            create_infographic(plot_file, baseline, recent, pid)
 
 
 if __name__ == "__main__":
